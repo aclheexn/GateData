@@ -1,0 +1,689 @@
+---
+title: "SensorData"
+output: html_document
+---
+```{r, include = FALSE}
+library(tidyr)
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(openair)
+library(gridExtra)
+library(imager)
+```
+
+
+Read-in of csv
+```{r}
+sensorData = read.csv("Sensor Data.csv")
+meteoData = read.csv("Meteorological Data.csv")
+```
+
+Cleaning Data
+
+
+```{r, echo = FALSE}
+# meteoData
+# 370m Elevation
+meteoData = meteoData[-c(459, 444),c(1,2,3)]
+colnames(meteoData) = c("Date", "Wind Direction", "Wind Speed(m/s)")
+meteoData$Date = strptime(meteoData$Date, format = '%m/%d/%y %H:00')
+
+# Different way of separating Date
+# meteoData2 = separate(data = meteoData, col = Date, into = c("Date", "Time"), sep = " ")
+# meteoData2$Date = as.Date(meteoData2$Date, '%m/%d/%Y')
+# meteoData2$Time = gsub(":.*$", "", meteoData2$Time)
+# meteoData2$Time = as.numeric(meteoData2$Time)
+
+#sensorData
+colnames(sensorData) = c("Chemical", "Monitor", "Date", "Reading")
+sensorData$Date = strptime(sensorData$Date, format = '%m/%d/%y %H:00')
+sensorData$Monitor = as.factor(sensorData$Monitor)
+ggplot(sensorData, aes(Chemical, Reading, fill = Monitor)) + geom_bar(stat = "identity") + 
+  #scale_fill_brewer(palette = "Set2")
+  scale_colour_manual(values = )
+
+ggplot(sensorData, aes(Monitor, Reading, fill = Chemical)) + geom_bar(stat = "identity")
+
+# Different way of separating Date
+# sensorData2 = separate(data = sensorData, col = Date, into = c("Date", "Time"), sep = " ")
+# sensorData2$Time = gsub(":.*$", "", sensorData2$Time)
+# sensorData2$Date = as.Date(sensorData2$Date, '%m/%d/%Y')
+# sensorData2$Time = as.numeric(sensorData2$Time)
+
+```
+
+
+Merging data together
+```{r}
+sensorData$`Wind Direction` = meteoData$`Wind Direction`[match(sensorData$Date, meteoData$Date)]
+sensorData$`Wind Speed(m/s)` = meteoData$`Wind Speed(m/s)`[match(sensorData$Date, meteoData$Date)]
+sensorData2 = na.omit(sensorData)
+ggplot(sensorData, aes(Date, Reading, fill = Chemical)) + geom_bar(stat = "identity")
+ggplot(sensorData2, aes(sensorData2$`Wind Direction`, Reading, fill = Chemical)) + geom_bar(stat = "identity")
+```
+boxPlot between each monitor on the readings and showing where the outliers are.
+```{r}
+x = split(sensorData, sensorData$Monitor)
+par(mfrow = c(3,3))
+mon1 = boxplot(x$`1`$Reading, main = "Monitor 1", ylim = c(0,60), ylab = "Reading", range = 3)
+mon2 = boxplot(x$`2`$Reading, main = "Monitor 2", ylim = c(0,60), ylab = "Reading", range = 3)
+mon3 = boxplot(x$`3`$Reading, main = "Monitor 3", ylim = c(0,60), ylab = "Reading", range = 3)
+mon4 = boxplot(x$`4`$Reading, main = "Monitor 4", ylim = c(0,60), ylab = "Reading", range = 3)
+mon5 = boxplot(x$`5`$Reading, main = "Monitor 5", ylim = c(0,60), ylab = "Reading", range = 3)
+mon6 = boxplot(x$`6`$Reading, main = "Monitor 6", ylim = c(0,60), ylab = "Reading", range = 3)
+mon7 = boxplot(x$`7`$Reading, main = "Monitor 7", ylim = c(0,60), ylab = "Reading", range = 3)
+mon8 = boxplot(x$`8`$Reading, main = "Monitor 8", ylim = c(0,60), ylab = "Reading", range = 3)
+mon9 = boxplot(x$`9`$Reading, main = "Monitor 9", ylim = c(0,60), ylab = "Reading", range = 3)
+
+summary(x$`1`$Reading)
+summary(x$`2`$Reading)
+summary(x$`3`$Reading)
+summary(x$`4`$Reading)
+summary(x$`5`$Reading)
+summary(x$`6`$Reading)
+summary(x$`7`$Reading)
+summary(x$`8`$Reading)
+summary(x$`9`$Reading)
+
+```
+
+```{r}
+par(mfrow = c(3,3))
+mon1 = boxplot(x$`1`$Reading, main = "Monitor 1", ylim = c(0,5), ylab = "Reading", range = 3)
+mon2 = boxplot(x$`2`$Reading, main = "Monitor 2", ylim = c(0,5), ylab = "Reading", range = 3)
+mon3 = boxplot(x$`3`$Reading, main = "Monitor 3", ylim = c(0,5), ylab = "Reading", range = 3)
+mon4 = boxplot(x$`4`$Reading, main = "Monitor 4", ylim = c(0,5), ylab = "Reading", range = 3)
+mon5 = boxplot(x$`5`$Reading, main = "Monitor 5", ylim = c(0,5), ylab = "Reading", range = 3)
+mon6 = boxplot(x$`6`$Reading, main = "Monitor 6", ylim = c(0,5), ylab = "Reading", range = 3)
+mon7 = boxplot(x$`7`$Reading, main = "Monitor 7", ylim = c(0,5), ylab = "Reading", range = 3)
+mon8 = boxplot(x$`8`$Reading, main = "Monitor 8", ylim = c(0,5), ylab = "Reading", range = 3)
+mon9 = boxplot(x$`9`$Reading, main = "Monitor 9", ylim = c(0,5), ylab = "Reading", range = 3)
+```
+
+
+
+Violin Graph
+```{r}
+ggplot(sensorData, aes(y = Reading, x = Monitor)) + geom_point() + geom_violin()
+```
+
+```{r}
+ggplot(sensorData, aes(y = Reading, x = Monitor)) + geom_point() + geom_violin() + geom_boxplot(width = 0.05) + ylim(c(0,5))
+
+monitorData = sensorData
+monitorDataApril = monitorData[monitorData$Date >= as.POSIXct("2016-04-01 00:00:00"),]
+monitorDataApril = monitorDataApril[monitorDataApril$Date <= as.POSIXct("2016-04-30 23:59:59"),]
+
+monitorDataAugust = monitorData[monitorData$Date >= as.POSIXct("2016-08-01 00:00:00"),]
+monitorDataAugust = monitorDataAugust[monitorDataAugust$Date <= as.POSIXct("2016-08-31 23:59:59"),]
+
+monitorDataDecember = monitorData[monitorData$Date  >= as.POSIXct("2016-12-01 00:00:00"),]
+monitorDataDecember = monitorDataDecember[monitorDataDecember$Date <= as.POSIXct("2016-12-31 23:59:59"),]
+
+ggplot(monitorDataApril, aes(y = Reading, x = Monitor)) + geom_point() + geom_violin() + geom_boxplot(width = 0.05) + ylim(c(0,5)) + facet_wrap(~Chemical) + ggtitle("April")
+
+ggplot(monitorDataAugust, aes(y = Reading, x = Monitor)) + geom_point() + geom_violin() + geom_boxplot(width = 0.05) + ylim(c(0,5)) + facet_wrap(~Chemical) + ggtitle("August")
+
+ggplot(monitorDataDecember, aes(y = Reading, x = Monitor)) + geom_point() + geom_violin() + geom_boxplot(width = 0.05) + ylim(c(0,5)) + facet_wrap(~Chemical) + ggtitle("December")
+```
+
+Dates of the high spikes
+```{r}
+monitor1 = ggplot(x$`1`, aes(Date, Reading)) + geom_bar(stat = "identity") + 
+  ggtitle(label = "Monitor 1")
+
+monitor2 = ggplot(x$`2`, aes(Date, Reading)) + geom_bar(stat = "identity") + 
+  ggtitle(label = "Monitor 2")
+
+monitor3 = ggplot(x$`3`, aes(Date, Reading)) + geom_bar(stat = "identity") +
+  ggtitle(label = "Monitor 3")
+
+monitor4 = ggplot(x$`4`, aes(Date, Reading)) + geom_bar(stat = "identity")+
+  ggtitle(label = "Monitor 4")
+
+monitor5 = ggplot(x$`5`, aes(Date, Reading)) + geom_bar(stat = "identity")+
+  ggtitle(label = "Monitor 5")
+
+monitor6 = ggplot(x$`6`, aes(Date, Reading)) + geom_bar(stat = "identity")+
+  ggtitle(label = "Monitor 6")
+
+monitor7 = ggplot(x$`7`, aes(Date, Reading)) + geom_bar(stat = "identity")+
+  ggtitle(label = "Monitor 7")
+
+monitor8 = ggplot(x$`8`, aes(Date, Reading)) + geom_bar(stat = "identity")+
+  ggtitle(label = "Monitor 8")
+
+monitor9 = ggplot(x$`9`, aes(Date, Reading)) + geom_bar(stat = "identity")+
+  ggtitle(label = "Monitor 9")
+
+grid.arrange(monitor1, monitor2, monitor3, monitor4, monitor5, monitor6, monitor7, monitor8, monitor9, ncol = 3)
+```
+
+Separating between Seasons
+```{r}
+sensorSpring = sensorData[sensorData$Date <= as.POSIXct("2016-05-31 23:59:59"),]
+sensorSummer = sensorData[sensorData$Date >= as.POSIXct("2016-06-01 00:00:00"),]
+sensorSummer = sensorSummer[sensorSummer$Date <= as.POSIXct("2016-08-31 23:59:59"),]
+sensorFall = sensorData[sensorData$Date >= as.POSIXct("2016-09-01 00:00:00"),]
+sensorFall = sensorFall[sensorFall$Date <= as.POSIXct("2016-11-30 23:59:59"),]
+sensorWinter = sensorData[sensorData$Date >= as.POSIXct("2016-12-01 00:00:00"),]
+
+spring = ggplot(sensorSpring, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Spring")
+summer = ggplot(sensorSummer, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Summer")
+fall = ggplot(sensorFall, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Fall")
+winter = ggplot(sensorWinter, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Winter")
+grid.arrange(spring, summer, fall, winter, ncol = 2)
+
+```
+
+Filtering based on Day of the Week
+```{r}
+sensorData$dayOfWeek = sensorData$Date$wday
+sensorData$dayOfWeek[sensorData$dayOfWeek == 0] <- "Sunday"
+sensorData$dayOfWeek[sensorData$dayOfWeek == 1] <- "Monday"
+sensorData$dayOfWeek[sensorData$dayOfWeek == 2] <- "Tuesday"
+sensorData$dayOfWeek[sensorData$dayOfWeek == 3] <- "Wednesday"
+sensorData$dayOfWeek[sensorData$dayOfWeek == 4] <- "Thursday"
+sensorData$dayOfWeek[sensorData$dayOfWeek == 5] <- "Friday"
+sensorData$dayOfWeek[sensorData$dayOfWeek == 6] <- "Saturday"
+sensorData$dayOfWeek = as.factor(sensorData$dayOfWeek)
+```
+
+Graphing based on dayOfWeek
+```{r}
+y = split(sensorData, sensorData$dayOfWeek)
+par(mfrow = c(3,3))
+plot(density(y$Monday$Reading), xlim = c(0,5), main = "Monday", ylim = c(0,2))
+plot(density(y$Tuesday$Reading), xlim = c(0,5), main = "Tuesday", ylim = c(0,2))
+plot(density(y$Wednesday$Reading), xlim = c(0,5), main = "Wednesday", ylim = c(0,2))
+plot(density(y$Thursday$Reading), xlim = c(0,5), main = "Thursday", ylim = c(0,2))
+plot(density(y$Friday$Reading), xlim = c(0,5), main = "Friday", ylim = c(0,2))
+plot(density(y$Saturday$Reading), xlim = c(0,5), main = "Saturday", ylim = c(0,2))
+plot(density(y$Sunday$Reading), xlim = c(0,5), main = "Sunday", ylim = c(0,2))
+
+```
+
+
+Q2
+-----------------------------------------------------------------------------------------------------------
+Chemical Densities
+# Possibily Winter = temperature inversions which make the higher readings
+# Summer = stagnant air
+```{r}
+z = split(sensorData, sensorData$Chemical)
+spring = ggplot(sensorSpring, aes(Reading, fill = Chemical)) + geom_density(alpha = .1) + xlim(c(0, 10)) + ggtitle("Spring")
+summer = ggplot(sensorSummer, aes(Reading, fill = Chemical)) + geom_density(alpha = .1) + xlim(c(0, 10)) + ggtitle("Summer")
+fall = ggplot(sensorFall, aes(Reading, fill = Chemical)) + geom_density(alpha = .1) + xlim(c(0, 10)) + ggtitle("Fall")
+winter = ggplot(sensorWinter, aes(Reading, fill = Chemical)) + geom_density(alpha = .1) + xlim(c(0, 10)) + ggtitle("Winter")
+grid.arrange(spring, summer, fall, winter, ncol = 2)
+```
+
+
+#Individual Monitors for each individual Chemical
+```{r}
+ggplot(sensorData, aes(Reading)) + geom_density(alpha = .1) + facet_grid(Chemical~Monitor) + 
+  scale_x_continuous(name = "Reading", limits = c(0,5), breaks = c(0,1,2,3,4,5)) + ggtitle("All Year") + scale_y_continuous(name = "Density", limits = c(0,3), breaks = c(0,1,2,3))
+
+ggplot(sensorSpring, aes(Reading)) + geom_density(alpha = .1) + facet_grid(Chemical~Monitor) + 
+  scale_x_continuous(name = "Reading", limits = c(0,5), breaks = c(0,1,2,3,4,5)) + ggtitle("Spring") + scale_y_continuous(name = "Density", limits = c(0,3), breaks = c(0,1,2,3))
+
+ggplot(sensorSummer, aes(Reading)) + geom_density(alpha = .1) + facet_grid(Chemical~Monitor) + 
+  scale_x_continuous(name = "Reading", limits = c(0,5), breaks = c(0,1,2,3,4,5)) + ggtitle("Summer") + scale_y_continuous(name = "Density", limits = c(0,3), breaks = c(0,1,2,3))
+
+ggplot(sensorWinter, aes(Reading)) + geom_density(alpha = .1) + facet_grid(Chemical~Monitor) + 
+  scale_x_continuous(name = "Reading", limits = c(0,5), breaks = c(0,1,2,3,4,5)) + ggtitle("Winter") + scale_y_continuous(name = "Density", limits = c(0,3), breaks = c(0,1,2,3))
+```
+
+
+
+
+
+My attempt at a Wind Rose
+```{r}
+colnames(meteoData) = c("Date", "wd", "ws")
+windApril = meteoData[meteoData$Date >= as.POSIXct("2016-04-01 00:00:00"),]
+windApril = windApril[windApril$Date <= as.POSIXct("2016-04-30 23:59:59"),]
+windAugust = meteoData[meteoData$Date >= as.POSIXct("2016-08-01 00:00:00"),]
+windAugust = windAugust[windAugust$Date <= as.POSIXct("2016-08-31 23:59:59"),]
+windDecember = meteoData[meteoData$Date >= as.POSIXct("2016-12-01 00:00:00"),]
+windDecember = windDecember[windDecember$Date <= as.POSIXct("2016-12-31 23:59:59"),]
+windRose(meteoData, main = "All Year")
+# April, August, December
+windRose(windApril, main = "April")
+windRose(windAugust, main = "August")
+windRose(windDecember, main = "December")
+```
+
+
+Splitting into half months
+```{r}
+windApril1 = windApril[windApril$Date <= as.POSIXct("2016-04-15 00:00:00"),]
+windApril2 = windApril[windApril$Date >= as.POSIXct("2016-04-15 00:00:00"),]
+windAugust1 = windAugust[windAugust$Date <= as.POSIXct("2016-08-16 00:00:00"),]
+windAugust2 = windAugust[windAugust$Date >= as.POSIXct("2016-08-16 00:00:00"),]
+windDecember1 = windDecember[windDecember$Date <= as.POSIXct("2016-12-16 00:00:00"),]
+windDecember2 = windDecember[windDecember$Date >= as.POSIXct("2016-12-16 00:00:00"),]
+
+windRose(windApril1, main = "First Half April")
+windRose(windApril2, main = "Second Half April")
+windRose(windAugust1, main = "First Half August")
+windRose(windAugust2, main = "Second Half August")
+windRose(windDecember1, main = "First Half December")
+windRose(windDecember2, main = "Second Half December")
+```
+
+Loading an image in
+```{r}
+# im = load.image(file = 'MapLargeLabels.jpg')
+# plot(im)
+# Doesn't really work too well, functions are hard to navigate
+```
+
+Cumulation of data in monitors
+```{r, echo = FALSE}
+monitorData = sensorData
+monitorData2 = split(sensorData, sensorData$Monitor)
+monitorData2$`1`$Reading = cumsum(monitorData2$`1`$Reading)
+monitorData2$`2`$Reading = cumsum(monitorData2$`2`$Reading)
+monitorData2$`3`$Reading = cumsum(monitorData2$`3`$Reading)
+monitorData2$`4`$Reading = cumsum(monitorData2$`4`$Reading)
+monitorData2$`5`$Reading = cumsum(monitorData2$`5`$Reading)
+monitorData2$`6`$Reading = cumsum(monitorData2$`6`$Reading)
+monitorData2$`7`$Reading = cumsum(monitorData2$`7`$Reading)
+monitorData2$`8`$Reading = cumsum(monitorData2$`8`$Reading)
+monitorData2$`9`$Reading = cumsum(monitorData2$`9`$Reading)
+monitorData3 = rbind(monitorData2$`1`, monitorData2$`2`, monitorData2$`3`, monitorData2$`4`, monitorData2$`5`, monitorData2$`6`, monitorData2$`7`, monitorData2$`8`, monitorData2$`9`)
+
+monitorDataApril = monitorData[monitorData$Date >= as.POSIXct("2016-04-01 00:00:00"),]
+monitorDataApril = monitorDataApril[monitorDataApril$Date <= as.POSIXct("2016-04-30 23:59:59"),]
+aprilData = split(monitorDataApril, monitorDataApril$Monitor)
+monitorDataAugust = monitorData[monitorData$Date >= as.POSIXct("2016-08-01 00:00:00"),]
+monitorDataAugust = monitorDataAugust[monitorDataAugust$Date <= as.POSIXct("2016-08-31 23:59:59"),]
+augustData = split(monitorDataAugust, monitorDataAugust$Monitor)
+monitorDataDecember = monitorData[monitorData$Date  >= as.POSIXct("2016-12-01 00:00:00"),]
+monitorDataDecember = monitorDataDecember[monitorDataDecember$Date <= as.POSIXct("2016-12-31 23:59:59"),]
+decemberData = split(monitorDataDecember, monitorDataDecember$Monitor)
+
+```
+
+Split up by Chemical and Monitor
+```{r, echo = FALSE}
+aprilChemData = split(monitorDataApril, monitorDataApril$Chemical)
+aprilChemAGData = split(aprilChemData$`AGOC-3A`, aprilChemData$`AGOC-3A`$Monitor)
+aprilChemAGData$`1`$Reading = cumsum(aprilChemAGData$`1`$Reading)
+aprilChemAGData$`2`$Reading = cumsum(aprilChemAGData$`2`$Reading)
+aprilChemAGData$`3`$Reading = cumsum(aprilChemAGData$`3`$Reading)
+aprilChemAGData$`4`$Reading = cumsum(aprilChemAGData$`4`$Reading)
+aprilChemAGData$`5`$Reading = cumsum(aprilChemAGData$`5`$Reading)
+aprilChemAGData$`6`$Reading = cumsum(aprilChemAGData$`6`$Reading)
+aprilChemAGData$`7`$Reading = cumsum(aprilChemAGData$`7`$Reading)
+aprilChemAGData$`8`$Reading = cumsum(aprilChemAGData$`8`$Reading)
+aprilChemAGData$`9`$Reading = cumsum(aprilChemAGData$`9`$Reading)
+
+aprilChemAPData = split(aprilChemData$Appluimonia, aprilChemData$Appluimonia$Monitor)
+aprilChemAPData$`1`$Reading = cumsum(aprilChemAPData$`1`$Reading)
+aprilChemAPData$`2`$Reading = cumsum(aprilChemAPData$`2`$Reading)
+aprilChemAPData$`3`$Reading = cumsum(aprilChemAPData$`3`$Reading)
+aprilChemAPData$`4`$Reading = cumsum(aprilChemAPData$`4`$Reading)
+aprilChemAPData$`5`$Reading = cumsum(aprilChemAPData$`5`$Reading)
+aprilChemAPData$`6`$Reading = cumsum(aprilChemAPData$`6`$Reading)
+aprilChemAPData$`7`$Reading = cumsum(aprilChemAPData$`7`$Reading)
+aprilChemAPData$`8`$Reading = cumsum(aprilChemAPData$`8`$Reading)
+aprilChemAPData$`9`$Reading = cumsum(aprilChemAPData$`9`$Reading)
+
+aprilChemCHData = split(aprilChemData$Chlorodinine, aprilChemData$Chlorodinine$Monitor)
+aprilChemCHData$`1`$Reading = cumsum(aprilChemCHData$`1`$Reading)
+aprilChemCHData$`2`$Reading = cumsum(aprilChemCHData$`2`$Reading)
+aprilChemCHData$`3`$Reading = cumsum(aprilChemCHData$`3`$Reading)
+aprilChemCHData$`4`$Reading = cumsum(aprilChemCHData$`4`$Reading)
+aprilChemCHData$`5`$Reading = cumsum(aprilChemCHData$`5`$Reading)
+aprilChemCHData$`6`$Reading = cumsum(aprilChemCHData$`6`$Reading)
+aprilChemCHData$`7`$Reading = cumsum(aprilChemCHData$`7`$Reading)
+aprilChemCHData$`8`$Reading = cumsum(aprilChemCHData$`8`$Reading)
+aprilChemCHData$`9`$Reading = cumsum(aprilChemCHData$`9`$Reading)
+
+aprilChemMEData = split(aprilChemData$Methylosmolene, aprilChemData$Methylosmolene$Monitor)
+aprilChemMEData$`1`$Reading = cumsum(aprilChemMEData$`1`$Reading)
+aprilChemMEData$`2`$Reading = cumsum(aprilChemMEData$`2`$Reading)
+aprilChemMEData$`3`$Reading = cumsum(aprilChemMEData$`3`$Reading)
+aprilChemMEData$`4`$Reading = cumsum(aprilChemMEData$`4`$Reading)
+aprilChemMEData$`5`$Reading = cumsum(aprilChemMEData$`5`$Reading)
+aprilChemMEData$`6`$Reading = cumsum(aprilChemMEData$`6`$Reading)
+aprilChemMEData$`7`$Reading = cumsum(aprilChemMEData$`7`$Reading)
+aprilChemMEData$`8`$Reading = cumsum(aprilChemMEData$`8`$Reading)
+aprilChemMEData$`9`$Reading = cumsum(aprilChemMEData$`9`$Reading)
+
+augustChemData = split(monitorDataAugust, monitorDataAugust$Chemical)
+augustChemAGData = split(augustChemData$`AGOC-3A`, augustChemData$`AGOC-3A`$Monitor)
+augustChemAGData$`1`$Reading = cumsum(augustChemAGData$`1`$Reading)
+augustChemAGData$`2`$Reading = cumsum(augustChemAGData$`2`$Reading)
+augustChemAGData$`3`$Reading = cumsum(augustChemAGData$`3`$Reading)
+augustChemAGData$`4`$Reading = cumsum(augustChemAGData$`4`$Reading)
+augustChemAGData$`5`$Reading = cumsum(augustChemAGData$`5`$Reading)
+augustChemAGData$`6`$Reading = cumsum(augustChemAGData$`6`$Reading)
+augustChemAGData$`7`$Reading = cumsum(augustChemAGData$`7`$Reading)
+augustChemAGData$`8`$Reading = cumsum(augustChemAGData$`8`$Reading)
+augustChemAGData$`9`$Reading = cumsum(augustChemAGData$`9`$Reading)
+
+augustChemAPData = split(augustChemData$Appluimonia, augustChemData$Appluimonia$Monitor)
+augustChemAPData$`1`$Reading = cumsum(augustChemAPData$`1`$Reading)
+augustChemAPData$`2`$Reading = cumsum(augustChemAPData$`2`$Reading)
+augustChemAPData$`3`$Reading = cumsum(augustChemAPData$`3`$Reading)
+augustChemAPData$`4`$Reading = cumsum(augustChemAPData$`4`$Reading)
+augustChemAPData$`5`$Reading = cumsum(augustChemAPData$`5`$Reading)
+augustChemAPData$`6`$Reading = cumsum(augustChemAPData$`6`$Reading)
+augustChemAPData$`7`$Reading = cumsum(augustChemAPData$`7`$Reading)
+augustChemAPData$`8`$Reading = cumsum(augustChemAPData$`8`$Reading)
+augustChemAPData$`9`$Reading = cumsum(augustChemAPData$`9`$Reading)
+
+augustChemCHData = split(augustChemData$Chlorodinine, augustChemData$Chlorodinine$Monitor)
+augustChemCHData$`1`$Reading = cumsum(augustChemCHData$`1`$Reading)
+augustChemCHData$`2`$Reading = cumsum(augustChemCHData$`2`$Reading)
+augustChemCHData$`3`$Reading = cumsum(augustChemCHData$`3`$Reading)
+augustChemCHData$`4`$Reading = cumsum(augustChemCHData$`4`$Reading)
+augustChemCHData$`5`$Reading = cumsum(augustChemCHData$`5`$Reading)
+augustChemCHData$`6`$Reading = cumsum(augustChemCHData$`6`$Reading)
+augustChemCHData$`7`$Reading = cumsum(augustChemCHData$`7`$Reading)
+augustChemCHData$`8`$Reading = cumsum(augustChemCHData$`8`$Reading)
+augustChemCHData$`9`$Reading = cumsum(augustChemCHData$`9`$Reading)
+
+augustChemMEData = split(augustChemData$Methylosmolene, augustChemData$Methylosmolene$Monitor)
+augustChemMEData$`1`$Reading = cumsum(augustChemMEData$`1`$Reading)
+augustChemMEData$`2`$Reading = cumsum(augustChemMEData$`2`$Reading)
+augustChemMEData$`3`$Reading = cumsum(augustChemMEData$`3`$Reading)
+augustChemMEData$`4`$Reading = cumsum(augustChemMEData$`4`$Reading)
+augustChemMEData$`5`$Reading = cumsum(augustChemMEData$`5`$Reading)
+augustChemMEData$`6`$Reading = cumsum(augustChemMEData$`6`$Reading)
+augustChemMEData$`7`$Reading = cumsum(augustChemMEData$`7`$Reading)
+augustChemMEData$`8`$Reading = cumsum(augustChemMEData$`8`$Reading)
+augustChemMEData$`9`$Reading = cumsum(augustChemMEData$`9`$Reading)
+
+decemberChemData = split(monitorDataDecember, monitorDataDecember$Chemical)
+decemberChemAGData = split(decemberChemData$`AGOC-3A`, decemberChemData$`AGOC-3A`$Monitor)
+decemberChemAGData$`1`$Reading = cumsum(decemberChemAGData$`1`$Reading)
+decemberChemAGData$`2`$Reading = cumsum(decemberChemAGData$`2`$Reading)
+decemberChemAGData$`3`$Reading = cumsum(decemberChemAGData$`3`$Reading)
+decemberChemAGData$`4`$Reading = cumsum(decemberChemAGData$`4`$Reading)
+decemberChemAGData$`5`$Reading = cumsum(decemberChemAGData$`5`$Reading)
+decemberChemAGData$`6`$Reading = cumsum(decemberChemAGData$`6`$Reading)
+decemberChemAGData$`7`$Reading = cumsum(decemberChemAGData$`7`$Reading)
+decemberChemAGData$`8`$Reading = cumsum(decemberChemAGData$`8`$Reading)
+decemberChemAGData$`9`$Reading = cumsum(decemberChemAGData$`9`$Reading)
+
+decemberChemAPData = split(decemberChemData$Appluimonia, decemberChemData$Appluimonia$Monitor)
+decemberChemAPData$`1`$Reading = cumsum(decemberChemAPData$`1`$Reading)
+decemberChemAPData$`2`$Reading = cumsum(decemberChemAPData$`2`$Reading)
+decemberChemAPData$`3`$Reading = cumsum(decemberChemAPData$`3`$Reading)
+decemberChemAPData$`4`$Reading = cumsum(decemberChemAPData$`4`$Reading)
+decemberChemAPData$`5`$Reading = cumsum(decemberChemAPData$`5`$Reading)
+decemberChemAPData$`6`$Reading = cumsum(decemberChemAPData$`6`$Reading)
+decemberChemAPData$`7`$Reading = cumsum(decemberChemAPData$`7`$Reading)
+decemberChemAPData$`8`$Reading = cumsum(decemberChemAPData$`8`$Reading)
+decemberChemAPData$`9`$Reading = cumsum(decemberChemAPData$`9`$Reading)
+
+decemberChemCHData = split(decemberChemData$Chlorodinine, decemberChemData$Chlorodinine$Monitor)
+decemberChemCHData$`1`$Reading = cumsum(decemberChemCHData$`1`$Reading)
+decemberChemCHData$`2`$Reading = cumsum(decemberChemCHData$`2`$Reading)
+decemberChemCHData$`3`$Reading = cumsum(decemberChemCHData$`3`$Reading)
+decemberChemCHData$`4`$Reading = cumsum(decemberChemCHData$`4`$Reading)
+decemberChemCHData$`5`$Reading = cumsum(decemberChemCHData$`5`$Reading)
+decemberChemCHData$`6`$Reading = cumsum(decemberChemCHData$`6`$Reading)
+decemberChemCHData$`7`$Reading = cumsum(decemberChemCHData$`7`$Reading)
+decemberChemCHData$`8`$Reading = cumsum(decemberChemCHData$`8`$Reading)
+decemberChemCHData$`9`$Reading = cumsum(decemberChemCHData$`9`$Reading)
+
+decemberChemMEData = split(decemberChemData$Methylosmolene, decemberChemData$Methylosmolene$Monitor)
+decemberChemMEData$`1`$Reading = cumsum(decemberChemMEData$`1`$Reading)
+decemberChemMEData$`2`$Reading = cumsum(decemberChemMEData$`2`$Reading)
+decemberChemMEData$`3`$Reading = cumsum(decemberChemMEData$`3`$Reading)
+decemberChemMEData$`4`$Reading = cumsum(decemberChemMEData$`4`$Reading)
+decemberChemMEData$`5`$Reading = cumsum(decemberChemMEData$`5`$Reading)
+decemberChemMEData$`6`$Reading = cumsum(decemberChemMEData$`6`$Reading)
+decemberChemMEData$`7`$Reading = cumsum(decemberChemMEData$`7`$Reading)
+decemberChemMEData$`8`$Reading = cumsum(decemberChemMEData$`8`$Reading)
+decemberChemMEData$`9`$Reading = cumsum(decemberChemMEData$`9`$Reading)
+```
+
+Plotting by chemical and stuff
+April
+
+
+```{r, echo = FALSE}
+monitorAprilAG1 = ggplot(aprilChemAGData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAprilAG2 = ggplot(aprilChemAGData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAprilAG3 = ggplot(aprilChemAGData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAprilAG4 = ggplot(aprilChemAGData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAprilAG5 = ggplot(aprilChemAGData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAprilAG6 = ggplot(aprilChemAGData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAprilAG7 = ggplot(aprilChemAGData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAprilAG8 = ggplot(aprilChemAGData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAprilAG9 = ggplot(aprilChemAGData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAprilAG1, monitorAprilAG2, monitorAprilAG3, monitorAprilAG4, monitorAprilAG5, monitorAprilAG6, monitorAprilAG7, monitorAprilAG8, monitorAprilAG9 , ncol = 3, top = "April AGOC-3A")
+
+monitorAprilAP1 = ggplot(aprilChemAPData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAprilAP2 = ggplot(aprilChemAPData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAprilAP3 = ggplot(aprilChemAPData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAprilAP4 = ggplot(aprilChemAPData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAprilAP5 = ggplot(aprilChemAPData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAprilAP6 = ggplot(aprilChemAPData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAprilAP7 = ggplot(aprilChemAPData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAprilAP8 = ggplot(aprilChemAPData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAprilAP9 = ggplot(aprilChemAPData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAprilAP1, monitorAprilAP2, monitorAprilAP3, monitorAprilAP4, monitorAprilAP5, monitorAprilAP6, monitorAprilAP7, monitorAprilAP8, monitorAprilAP9 , ncol = 3, top = "April Appluimonia")
+
+monitorAprilCH1 = ggplot(aprilChemCHData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAprilCH2 = ggplot(aprilChemCHData$`2`, aes(x = Date, y = Reading)) +geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAprilCH3 = ggplot(aprilChemCHData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAprilCH4 = ggplot(aprilChemCHData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAprilCH5 = ggplot(aprilChemCHData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAprilCH6 = ggplot(aprilChemCHData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAprilCH7 = ggplot(aprilChemCHData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAprilCH8 = ggplot(aprilChemCHData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAprilCH9 = ggplot(aprilChemCHData$`9`, aes(x = Date, y = Reading)) +geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAprilCH1, monitorAprilCH2, monitorAprilCH3, monitorAprilCH4, monitorAprilCH5, monitorAprilCH6, monitorAprilCH7, monitorAprilCH8, monitorAprilCH9 , ncol = 3, top = "April Chlorodine")
+
+monitorAprilME1 = ggplot(aprilChemMEData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAprilME2 = ggplot(aprilChemMEData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAprilME3 = ggplot(aprilChemMEData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAprilME4 = ggplot(aprilChemMEData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAprilME5 = ggplot(aprilChemMEData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAprilME6 = ggplot(aprilChemMEData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAprilME7 = ggplot(aprilChemMEData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAprilME8 = ggplot(aprilChemMEData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAprilME9 = ggplot(aprilChemMEData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAprilME1, monitorAprilME2, monitorAprilME3, monitorAprilME4, monitorAprilME5, monitorAprilME6, monitorAprilME7, monitorAprilME8, monitorAprilME9 , ncol = 3, top = "April Methylosmolene")
+```
+
+August
+
+
+```{r, echo = FALSE}
+monitorAugustAG1 = ggplot(augustChemAGData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAugustAG2 = ggplot(augustChemAGData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAugustAG3 = ggplot(augustChemAGData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAugustAG4 = ggplot(augustChemAGData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAugustAG5 = ggplot(augustChemAGData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAugustAG6 = ggplot(augustChemAGData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAugustAG7 = ggplot(augustChemAGData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAugustAG8 = ggplot(augustChemAGData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAugustAG9 = ggplot(augustChemAGData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAugustAG1, monitorAugustAG2, monitorAugustAG3, monitorAugustAG4, monitorAugustAG5, monitorAugustAG6, monitorAugustAG7, monitorAugustAG8, monitorAugustAG9 , ncol = 3, top = "August AGOC-3A")
+
+monitorAugustAP1 = ggplot(augustChemAPData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAugustAP2 = ggplot(augustChemAPData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAugustAP3 = ggplot(augustChemAPData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAugustAP4 = ggplot(augustChemAPData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAugustAP5 = ggplot(augustChemAPData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAugustAP6 = ggplot(augustChemAPData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAugustAP7 = ggplot(augustChemAPData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAugustAP8 = ggplot(augustChemAPData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAugustAP9 = ggplot(augustChemAPData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAugustAP1, monitorAugustAP2, monitorAugustAP3, monitorAugustAP4, monitorAugustAP5, monitorAugustAP6, monitorAugustAP7, monitorAugustAP8, monitorAugustAP9 , ncol = 3, top = "August Appluimonia")
+
+monitorAugustCH1 = ggplot(augustChemCHData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAugustCH2 = ggplot(augustChemCHData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAugustCH3 = ggplot(augustChemCHData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAugustCH4 = ggplot(augustChemCHData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAugustCH5 = ggplot(augustChemCHData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAugustCH6 = ggplot(augustChemCHData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAugustCH7 = ggplot(augustChemCHData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAugustCH8 = ggplot(augustChemCHData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAugustCH9 = ggplot(augustChemCHData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAugustCH1, monitorAugustCH2, monitorAugustCH3, monitorAugustCH4, monitorAugustCH5, monitorAugustCH6, monitorAugustCH7, monitorAugustCH8, monitorAugustCH9 , ncol = 3, top = "August Chlorodine")
+
+monitorAugustME1 = ggplot(augustChemMEData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorAugustME2 = ggplot(augustChemMEData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorAugustME3 = ggplot(augustChemMEData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorAugustME4 = ggplot(augustChemMEData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorAugustME5 = ggplot(augustChemMEData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorAugustME6 = ggplot(augustChemMEData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorAugustME7 = ggplot(augustChemMEData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorAugustME8 = ggplot(augustChemMEData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorAugustME9 = ggplot(augustChemMEData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorAugustME1, monitorAugustME2, monitorAugustME3, monitorAugustME4, monitorAugustME5, monitorAugustME6, monitorAugustME7, monitorAugustME8, monitorAugustME9 , ncol = 3, top = "August Methylosmolene")
+```
+
+December
+
+```{r, echo = FALSE}
+monitorDecemberAG1 = ggplot(decemberChemAGData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorDecemberAG2 = ggplot(decemberChemAGData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorDecemberAG3 = ggplot(decemberChemAGData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorDecemberAG4 = ggplot(decemberChemAGData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorDecemberAG5 = ggplot(decemberChemAGData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorDecemberAG6 = ggplot(decemberChemAGData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorDecemberAG7 = ggplot(decemberChemAGData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorDecemberAG8 = ggplot(decemberChemAGData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorDecemberAG9 = ggplot(decemberChemAGData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorDecemberAG1, monitorDecemberAG2, monitorDecemberAG3, monitorDecemberAG4, monitorDecemberAG5, monitorDecemberAG6, monitorDecemberAG7, monitorDecemberAG8, monitorDecemberAG9 , ncol = 3, top = "December AGOC-3A")
+
+monitorDecemberAP1 = ggplot(decemberChemAPData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorDecemberAP2 = ggplot(decemberChemAPData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorDecemberAP3 = ggplot(decemberChemAPData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorDecemberAP4 = ggplot(decemberChemAPData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorDecemberAP5 = ggplot(decemberChemAPData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorDecemberAP6 = ggplot(decemberChemAPData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorDecemberAP7 = ggplot(decemberChemAPData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorDecemberAP8 = ggplot(decemberChemAPData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorDecemberAP9 = ggplot(decemberChemAPData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorDecemberAP1, monitorDecemberAP2, monitorDecemberAP3, monitorDecemberAP4, monitorDecemberAP5, monitorDecemberAP6, monitorDecemberAP7, monitorDecemberAP8, monitorDecemberAP9 , ncol = 3, top = "December Appluimonia")
+
+monitorDecemberCH1 = ggplot(decemberChemCHData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorDecemberCH2 = ggplot(decemberChemCHData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorDecemberCH3 = ggplot(decemberChemCHData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorDecemberCH4 = ggplot(decemberChemCHData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorDecemberCH5 = ggplot(decemberChemCHData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorDecemberCH6 = ggplot(decemberChemCHData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorDecemberCH7 = ggplot(decemberChemCHData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorDecemberCH8 = ggplot(decemberChemCHData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorDecemberCH9 = ggplot(decemberChemCHData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorDecemberCH1, monitorDecemberCH2, monitorDecemberCH3, monitorDecemberCH4, monitorDecemberCH5, monitorDecemberCH6, monitorDecemberCH7, monitorDecemberCH8, monitorDecemberCH9 , ncol = 3, top = "December Chlorodine")
+
+monitorDecemberME1 = ggplot(decemberChemMEData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0,2000)
+monitorDecemberME2 = ggplot(decemberChemMEData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0,2000)
+monitorDecemberME3 = ggplot(decemberChemMEData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0,2000)
+monitorDecemberME4 = ggplot(decemberChemMEData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0,2000)
+monitorDecemberME5 = ggplot(decemberChemMEData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0,2000)
+monitorDecemberME6 = ggplot(decemberChemMEData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0,2000)
+monitorDecemberME7 = ggplot(decemberChemMEData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0,2000)
+monitorDecemberME8 = ggplot(decemberChemMEData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0,2000)
+monitorDecemberME9 = ggplot(decemberChemMEData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0,2000)
+grid.arrange(monitorDecemberME1, monitorDecemberME2, monitorDecemberME3, monitorDecemberME4, monitorDecemberME5, monitorDecemberME6, monitorDecemberME7, monitorDecemberME8, monitorDecemberME9 , ncol = 3, top = "December Methylosmolene")
+```
+
+
+Plotting All Data
+```{r}
+monitor1 = ggplot(monitorData2$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0, 50000)
+monitor2 = ggplot(monitorData2$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0, 50000)
+monitor3 = ggplot(monitorData2$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0, 50000)
+monitor4 = ggplot(monitorData2$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0, 50000)
+monitor5 = ggplot(monitorData2$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0, 50000)
+monitor6 = ggplot(monitorData2$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0, 50000)
+monitor7 = ggplot(monitorData2$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0, 50000)
+monitor8 = ggplot(monitorData2$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0, 50000)
+monitor9 = ggplot(monitorData2$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0, 50000)
+grid.arrange(monitor1, monitor2, monitor3, monitor4, monitor5, monitor6, monitor7, monitor8, monitor9 , ncol = 3)
+```
+
+
+
+April Accumulation
+```{r}
+aprilData$`1`$Reading = cumsum(aprilData$`1`$Reading)
+aprilData$`2`$Reading = cumsum(aprilData$`2`$Reading)
+aprilData$`3`$Reading = cumsum(aprilData$`3`$Reading)
+aprilData$`4`$Reading = cumsum(aprilData$`4`$Reading)
+aprilData$`5`$Reading = cumsum(aprilData$`5`$Reading)
+aprilData$`6`$Reading = cumsum(aprilData$`6`$Reading)
+aprilData$`7`$Reading = cumsum(aprilData$`7`$Reading)
+aprilData$`8`$Reading = cumsum(aprilData$`8`$Reading)
+aprilData$`9`$Reading = cumsum(aprilData$`9`$Reading)
+monitor1April = ggplot(aprilData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0, 25000)
+monitor2April = ggplot(aprilData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0, 25000)
+monitor3April = ggplot(aprilData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0, 25000)
+monitor4April = ggplot(aprilData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0, 25000)
+monitor5April = ggplot(aprilData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0, 25000)
+monitor6April = ggplot(aprilData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0, 25000)
+monitor7April = ggplot(aprilData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0, 25000)
+monitor8April = ggplot(aprilData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0, 25000)
+monitor9April = ggplot(aprilData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0, 25000)
+grid.arrange(monitor1April, monitor2April, monitor3April, monitor4April, monitor5April, monitor6April, monitor7April, monitor8April, monitor9April , ncol = 3, top = "April")
+
+```
+
+August Accumulation
+```{r}
+augustData$`1`$Reading = cumsum(augustData$`1`$Reading)
+augustData$`2`$Reading = cumsum(augustData$`2`$Reading)
+augustData$`3`$Reading = cumsum(augustData$`3`$Reading)
+augustData$`4`$Reading = cumsum(augustData$`4`$Reading)
+augustData$`5`$Reading = cumsum(augustData$`5`$Reading)
+augustData$`6`$Reading = cumsum(augustData$`6`$Reading)
+augustData$`7`$Reading = cumsum(augustData$`7`$Reading)
+augustData$`8`$Reading = cumsum(augustData$`8`$Reading)
+augustData$`9`$Reading = cumsum(augustData$`9`$Reading)
+monitor1August = ggplot(augustData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0, 25000)
+monitor2August = ggplot(augustData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0, 25000)
+monitor3August = ggplot(augustData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0, 25000)
+monitor4August = ggplot(augustData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0, 25000)
+monitor5August = ggplot(augustData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0, 25000)
+monitor6August = ggplot(augustData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0, 25000)
+monitor7August = ggplot(augustData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0, 25000)
+monitor8August = ggplot(augustData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0, 25000)
+monitor9August = ggplot(augustData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0, 25000)
+grid.arrange(monitor1August, monitor2August, monitor3August, monitor4August, monitor5August, monitor6August, monitor7August, monitor8August, monitor9August , ncol = 3, top = "August")
+
+```
+
+
+December Accumulation
+```{r}
+decemberData$`1`$Reading = cumsum(decemberData$`1`$Reading)
+decemberData$`2`$Reading = cumsum(decemberData$`2`$Reading)
+decemberData$`3`$Reading = cumsum(decemberData$`3`$Reading)
+decemberData$`4`$Reading = cumsum(decemberData$`4`$Reading)
+decemberData$`5`$Reading = cumsum(decemberData$`5`$Reading)
+decemberData$`6`$Reading = cumsum(decemberData$`6`$Reading)
+decemberData$`7`$Reading = cumsum(decemberData$`7`$Reading)
+decemberData$`8`$Reading = cumsum(decemberData$`8`$Reading)
+decemberData$`9`$Reading = cumsum(decemberData$`9`$Reading)
+monitor1December = ggplot(decemberData$`1`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 1") + ylim(0, 25000)
+monitor2December = ggplot(decemberData$`2`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 2") + ylim(0, 25000)
+monitor3December = ggplot(decemberData$`3`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 3") + ylim(0, 25000)
+monitor4December = ggplot(decemberData$`4`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 4") + ylim(0, 25000)
+monitor5December = ggplot(decemberData$`5`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 5") + ylim(0, 25000)
+monitor6December = ggplot(decemberData$`6`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 6") + ylim(0, 25000)
+monitor7December = ggplot(decemberData$`7`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 7") + ylim(0, 25000)
+monitor8December = ggplot(decemberData$`8`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 8") + ylim(0, 25000)
+monitor9December = ggplot(decemberData$`9`, aes(x = Date, y = Reading)) + geom_line() + ggtitle("Monitor 9") + ylim(0, 25000)
+grid.arrange(monitor1December, monitor2December, monitor3December, monitor4December, monitor5December, monitor6December, monitor7December, monitor8December, monitor9December , ncol = 3, top = "December")
+
+```
+
+
+
+
+
+
