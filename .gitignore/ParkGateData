@@ -1,0 +1,434 @@
+---
+title: "VASTChallenge1"
+output: html_document
+---
+Libraries
+```{r, include = FALSE}
+library(zoo)
+library(ggplot2)
+library(gridExtra)
+library(tidyr)
+library(plotly)
+library(plyr)
+library(openair)
+library(gridExtra)
+library(imager)
+```
+
+
+Read-in CSV
+```{r}
+lekagulData = read.csv("Lekagul Sensor Data.csv")
+```
+
+Cleaning of Data
+```{r}
+lekagulData$Timestamp = strptime(lekagulData$Timestamp, format = '%Y-%m-%d %H:%M:%S')
+lekagulData$car.id = as.character(lekagulData$car.id)
+lekagulData$car.type = as.character(lekagulData$car.type)
+lekagulData$gate.name = as.character(lekagulData$gate.name)
+
+lekagul = separate(data = lekagulData, col = Timestamp, into = c("Date", "Time"), sep = " ")
+lekagul$Time = gsub(":.*$", "", lekagul$Time)
+lekagul$Date = as.Date(lekagul$Date, '%Y-%m-%d')
+lekagul$Time = as.numeric(lekagul$Time)
+lekagulData2 = lekagulData[lekagulData$car.type == "2P",]
+lekagulData2 = lekagulData[lekagulData$gate.name == "ranger-base",]
+```
+
+
+Run a i for loop across all of the lines and then run a second for loop starting at the i position.  Look for entrance and stuffeach
+```{r}
+df = data.frame()
+for(i in 1:(length(lekagulData2$car.id)-1)){
+  for(j in (i+1):length(lekagulData2$car.id)){
+    if(lekagulData2[i,2] == lekagulData2[j,2]){
+      
+      df = rbind(df, c(as.Date(lekagulData2[j,1]) + 1, as.numeric(difftime(lekagulData2[j,1], lekagulData2[i,1], units = "mins")), lekagulData2[j, 2], lekagulData2[j, 3], lekagulData2[j,4]), stringsAsFactors = F)
+      break
+      
+    }
+  }
+}
+
+colnames(df) = c("Date", "Duration", "iDCar", "Car.Type", "location")
+df$Duration = as.numeric(df$Duration)
+df$Date = as.numeric(df$Date)
+df$Date = as.POSIXct.Date(df$Date)
+
+```
+
+
+Camping with times
+```{r}
+df5 = data.frame()
+
+count2 = list()
+lekagul = lekagul[lekagul$car.type != "2P",]
+for(i in 1:(length(lekagul$car.id)-1))
+{
+  if(lekagul[i,5] == "camping0" | lekagul[i,5] == "camping1" | lekagul[i,5] == "camping2" | lekagul[i,5] == "camping3"
+     | lekagul[i,5] == "camping4" | lekagul[i,5] == "camping5" | lekagul[i,5] == "camping6" | lekagul[i,5] == "camping7" | lekagul[i,5] == "camping8")
+  {
+    for(j in (i+1):length(lekagul$car.id))
+    {
+      if(lekagul[i,3] %in% names(count2) == TRUE){
+        if(count2[[lekagul[i,3]]] %% 2 == 1)
+        {
+        count2[[lekagul[i,3]]] = count2[[lekagul[i,3]]] + 1
+        break
+        }
+        else{
+          if((lekagul[i,5] == "camping0" | lekagul[i,5] == "camping1" | lekagul[i,5] == "camping2" | lekagul[i,5] == "camping3"
+     | lekagul[i,5] == "camping4" | lekagul[i,5] == "camping5" | lekagul[i,5] == "camping6" | lekagul[i,5] == "camping7" | lekagul[i,5] == "camping8") && (lekagul[i,3] == lekagul[j,3]))
+          {
+            df5 = rbind(df5, c(as.Date(lekagul[i,1]), lekagul[i, 2], lekagul[j, 3], lekagul[j,4], lekagul[j,5]), stringsAsFactors = F)
+            break
+          }
+        }
+      }
+      else{
+        if((lekagul[i,5] == "camping0" | lekagul[i,5] == "camping1" | lekagul[i,5] == "camping2" | lekagul[i,5] == "camping3"
+     | lekagul[i,5] == "camping4" | lekagul[i,5] == "camping5" | lekagul[i,5] == "camping6" | lekagul[i,5] == "camping7" | lekagul[i,5] == "camping8") && (lekagul[i,3] == lekagul[j,3])){
+          
+        count2[lekagul[i,3]] = 0
+        df5 = rbind(df5, c(as.Date(lekagul[i,1]), lekagul[i, 2], lekagul[j, 3], lekagul[j,4], lekagul[j,5]), stringsAsFactors = F)
+        count2[[lekagul[i,3]]] = count2[[lekagul[i,3]]] + 1
+        break
+        
+          }
+        
+        }
+      }
+    }
+}
+
+colnames(df5) = c("Date","Time",  "CarID", "Type", "ExitGate")
+df5$Date = as.numeric(df5$Date)
+df5$Date = as.POSIXct.Date(df5$Date)
+df5$Type = as.factor(df5$Type)
+df5$ExitGate = as.factor(df5$ExitGate)
+# df3$Duration = as.numeric(df3$Duration)
+df5 = na.omit(df5)
+
+df2 = data.frame()
+
+count = list()
+for(i in 1:(length(lekagulData$car.id)-1))
+{
+  if(lekagulData[i,4] == "entrance0" | lekagulData[i,4] == "entrance1" | lekagulData[i,4] == "entrance2" | lekagulData[i,4] == "entrance3"
+     | lekagulData[i,4] == "entrance4")
+  {
+    for(j in (i+1):length(lekagulData$car.id))
+    {
+      
+      if(lekagulData[i,2] %in% names(count) == TRUE){
+        if(count[[lekagulData[i,2]]] %% 2 == 1)
+        {
+        count[[lekagulData[i,2]]] = count[[lekagulData[i,2]]] + 1
+        break
+        }
+        else{
+          if((lekagulData[j,4] == "entrance0" | lekagulData[j,4] == "entrance1" | lekagulData[j,4] == "entrance2" | lekagulData[j,4] == "entrance3"
+              | lekagulData[j,4] == "entrance4") && (lekagulData[i,2] == lekagulData[j,2]))
+          {
+            df2 = rbind(df2, c(as.numeric(difftime(lekagulData[j,1], lekagulData[i,1], units = "mins")), lekagulData[j, 2], lekagulData[j, 3], lekagulData[j,4]), stringsAsFactors = F)
+            break
+          }
+        }
+      }
+      else{
+        if((lekagulData[j,4] == "entrance0" | lekagulData[j,4] == "entrance1" | lekagulData[j,4] == "entrance2" | lekagulData[j,4] == "entrance3"
+            | lekagulData[j,4] == "entrance4") && (lekagulData[i,2] == lekagulData[j,2])){
+          
+        count[lekagulData[i,2]] = 0
+        df2 = rbind(df2, c(as.Date(lekagulData[i,1]) + 1, as.numeric(difftime(lekagulData[j,1], lekagulData[i,1], units = "mins")), lekagulData[j, 2], lekagulData[j, 3], lekagulData[j,4]), stringsAsFactors = F)
+        count[[lekagulData[i,2]]] = count[[lekagulData[i,2]]] + 1
+        break
+        
+          }
+        
+        }
+      }
+    }
+}
+
+colnames(df2) = c("Date", "Duration", "CarID", "Type", "ExitGate")
+df2$Date = as.numeric(df2$Date)
+df2$Date = as.POSIXct.Date(df2$Date)
+df2$Type = as.factor(df2$Type)
+df2$ExitGate = as.factor(df2$ExitGate)
+df2$Duration = as.numeric(df2$Duration)
+df2 = na.omit(df2)
+
+df3 = data.frame()
+
+count2 = list()
+lekagulData = lekagulData[lekagulData$car.type != "2P",]
+for(i in 1:(length(lekagulData$car.id)-1))
+{
+  if(lekagulData[i,4] == "camping0" | lekagulData[i,4] == "camping1" | lekagulData[i,4] == "camping2" | lekagulData[i,4] == "camping3"
+     | lekagulData[i,4] == "camping4" | lekagulData[i,4] == "camping5" | lekagulData[i,4] == "camping6" | lekagulData[i,4] == "camping7" | lekagulData[i,4] == "camping8")
+  {
+    for(j in (i+1):length(lekagulData$car.id))
+    {
+      
+      if(lekagulData[i,2] %in% names(count2) == TRUE){
+        if(count2[[lekagulData[i,2]]] %% 2 == 1)
+        {
+        count2[[lekagulData[i,2]]] = count2[[lekagulData[i,2]]] + 1
+        break
+        }
+        else{
+          if((lekagulData[i,4] == "camping0" | lekagulData[i,4] == "camping1" | lekagulData[i,4] == "camping2" | lekagulData[i,4] == "camping3"
+     | lekagulData[i,4] == "camping4" | lekagulData[i,4] == "camping5" | lekagulData[i,4] == "camping6" | lekagulData[i,4] == "camping7" | lekagulData[i,4] == "camping8") && (lekagulData[i,2] == lekagulData[j,2]))
+          {
+            df3 = rbind(df3, c(as.Date(lekagulData[i,1]), as.numeric(difftime(lekagulData[j,1], lekagulData[i,1], units = "mins")), lekagulData[j, 2], lekagulData[j, 3], lekagulData[j,4]), stringsAsFactors = F)
+            break
+          }
+        }
+      }
+      else{
+        if((lekagulData[i,4] == "camping0" | lekagulData[i,4] == "camping1" | lekagulData[i,4] == "camping2" | lekagulData[i,4] == "camping3"
+     | lekagulData[i,4] == "camping4" | lekagulData[i,4] == "camping5" | lekagulData[i,4] == "camping6" | lekagulData[i,4] == "camping7" | lekagulData[i,4] == "camping8") && (lekagulData[i,2] == lekagulData[j,2])){
+          
+        count2[lekagulData[i,2]] = 0
+        df3 = rbind(df3, c(as.Date(lekagulData[i,1]), as.numeric(difftime(lekagulData[j,1], lekagulData[i,1], units = "mins")), lekagulData[j, 2], lekagulData[j, 3], lekagulData[j,4]), stringsAsFactors = F)
+        count2[[lekagulData[i,2]]] = count2[[lekagulData[i,2]]] + 1
+        break
+        
+          }
+        
+        }
+      }
+    }
+}
+
+colnames(df3) = c("Date", "Duration", "CarID", "Type", "ExitGate")
+df3$Date = as.numeric(df3$Date)
+df3$Date = as.POSIXct.Date(df3$Date)
+df3$Type = as.factor(df3$Type)
+df3$ExitGate = as.factor(df3$ExitGate)
+df3$Duration = as.numeric(df3$Duration)
+# df3 = na.omit(df3)
+
+
+df4 = data.frame()
+
+count = list()
+for(i in 1:(length(lekagul$car.id)-1))
+{
+  if(lekagul[i,5] == "entrance0" | lekagul[i,5] == "entrance1" | lekagul[i,5] == "entrance2" | lekagul[i,5] == "entrance3"
+     | lekagul[i,5] == "entrance4")
+  {
+    for(j in (i+1):length(lekagul$car.id))
+    {
+   
+      if(lekagul[i,3] %in% names(count) == TRUE){
+        if(count[[lekagul[i,3]]] %% 2 == 1)
+        {
+        count[[lekagul[i,3]]] = count[[lekagul[i,3]]] + 1
+        break
+        }
+        else{
+          if((lekagul[j,5] == "entrance0" | lekagul[j,5] == "entrance1" | lekagul[j,5] == "entrance2" | lekagul[j,5] == "entrance3"
+              | lekagul[j,5] == "entrance4") && (lekagul[i,3] == lekagul[j,3]))
+          {
+            df4 = rbind(df4, c(lekagul[i,1], lekagul[i, 2], lekagul[i, 3], lekagul[i,4]), stringsAsFactors = F)
+            break
+          }
+        }
+      }
+      else{
+        if((lekagul[j,5] == "entrance0" | lekagul[j,5] == "entrance1" | lekagul[j,5] == "entrance2" | lekagul[j,5] == "entrance3"
+            | lekagul[j,5] == "entrance4") && (lekagul[i,3] == lekagul[j,3])){
+          
+        count[lekagul[i,3]] = 0
+        df4 = rbind(df4, c(lekagul[i,1], lekagul[i,2], lekagul[i, 3], lekagul[i, 4], lekagul[i, 5]), stringsAsFactors = F)
+        count[[lekagul[i,3]]] = count[[lekagul[i,3]]] + 1
+        break
+        
+          }
+        
+        }
+      }
+    }
+}
+
+colnames(df4) = c("Date", "Time", "CarID", "Type", "ExitGate")
+df4$Date = as.numeric(df4$Date)
+df4$Date = df4$Date + 1
+df4$Date = as.POSIXct.Date(df4$Date)
+df4$Type = as.factor(df4$Type)
+df4$ExitGate = as.factor(df4$ExitGate)
+# df4$Duration = as.numeric(df4$Duration)
+df4 = na.omit(df4)
+
+df4$Duration = df2$Duration
+df5$Duration = df3$Duration
+
+df4$dayOfWeek = as.POSIXlt(df4$Date)$wday
+df4$dayOfWeek[df4$dayOfWeek == 0] <- "Sunday"
+df4$dayOfWeek[df4$dayOfWeek == 1] <- "Monday"
+df4$dayOfWeek[df4$dayOfWeek == 2] <- "Tuesday"
+df4$dayOfWeek[df4$dayOfWeek == 3] <- "Wednesday"
+df4$dayOfWeek[df4$dayOfWeek == 4] <- "Thursday"
+df4$dayOfWeek[df4$dayOfWeek == 5] <- "Friday"
+df4$dayOfWeek[df4$dayOfWeek == 6] <- "Saturday"
+df4$dayOfWeek = as.factor(df4$dayOfWeek)
+
+df5$dayOfWeek = as.POSIXlt(df5$Date)$wday
+df5$dayOfWeek[df5$dayOfWeek == 0] <- "Sunday"
+df5$dayOfWeek[df5$dayOfWeek == 1] <- "Monday"
+df5$dayOfWeek[df5$dayOfWeek == 2] <- "Tuesday"
+df5$dayOfWeek[df5$dayOfWeek == 3] <- "Wednesday"
+df5$dayOfWeek[df5$dayOfWeek == 4] <- "Thursday"
+df5$dayOfWeek[df5$dayOfWeek == 5] <- "Friday"
+df5$dayOfWeek[df5$dayOfWeek == 6] <- "Saturday"
+df5$dayOfWeek = as.factor(df5$dayOfWeek)
+
+df4 = na.omit(df4)
+df5 = na.omit(df5)
+df6 = df4[!(df4$CarID %in% df5$CarID),]
+df4$dayOfWeek = factor(df4$dayOfWeek, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+df5$dayOfWeek = factor(df5$dayOfWeek, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+df6$dayOfWeek = factor(df6$dayOfWeek, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+df4$dayOfWeek = revalue(df4$dayOfWeek, c("Monday" = "Mon", "Tuesday" = "Tues", "Wednesday" = "Wed", "Thursday" = "Thurs", "Friday" = "Fri", "Saturday" = "Sat", "Sunday" = "Sun"))
+
+df5$dayOfWeek = revalue(df5$dayOfWeek, c("Monday" = "Mon", "Tuesday" = "Tues", "Wednesday" = "Wed", "Thursday" = "Thurs", "Friday" = "Fri", "Saturday" = "Sat", "Sunday" = "Sun"))
+
+df6$dayOfWeek = revalue(df6$dayOfWeek, c("Monday" = "Mon", "Tuesday" = "Tues", "Wednesday" = "Wed", "Thursday" = "Thurs", "Friday" = "Fri", "Saturday" = "Sat", "Sunday" = "Sun"))
+
+ggplot(df5, aes(x = Duration)) + geom_histogram(bins = 50) + facet_grid(dayOfWeek~Type)
+ggplot(df4, aes(x = dayOfWeek)) + geom_bar() + facet_wrap(~Type)
+
+all = ggplot(df4, aes(x = dayOfWeek)) + geom_bar() + ggtitle("All")
+camper = ggplot(df5, aes(x = dayOfWeek)) + geom_bar() + ggtitle("Campers")
+noncamper = ggplot(df6, aes(x = dayOfWeek)) + geom_bar() + ggtitle("Non-Campers")
+
+grid.arrange(all, camper, noncamper, ncol = 3)
+
+graph4 = ggplot(df4, aes(x = Time)) + geom_bar() + ggtitle("All")
+graph5 = ggplot(df5, aes(x = Time)) + geom_bar() + ggtitle("Campers")
+graph6 = ggplot(df6, aes(x = Time)) + geom_bar() + ggtitle("Non-Campers")
+grid.arrange(graph4, graph5, graph6, ncol = 3)
+
+df5$Time = as.numeric(df5$Time)
+df7 = split(df5, df5$Duration > 1440)
+
+tru = ggplot(df7$`TRUE`, aes(x = Time)) + geom_bar() + ggtitle("More than a day")
+fal =ggplot(df7$`FALSE`, aes(x = Time)) + geom_bar() + ggtitle("Less than a day")
+grid.arrange(fal, tru, ncol = 2)
+
+# exclusively type 1,2,3 that arent camper
+df8 = df6[!df6$Type %in% c(4,5,6),]
+ggplot(df8, aes(Duration)) + geom_density() + xlim(0, 100) + ggtitle("Non-Camping Cars (No Type 4,5,6)")
+
+# Trying to find number of places each places
+# Everybody who stays longer than 40 minutes doesn't leave through entrance 0
+df9 = split(df6, df6$Duration > 40)
+df10 = lekagulData[lekagulData$car.id %in% df9$`FALSE`$CarID,]
+df10$car.id = as.factor(df10$car.id)
+df10$car.type = as.factor(df10$car.type)
+df10$gate.name = as.factor(df10$gate.name)
+dest10 = nrow(df10) / nlevels(df10$car.id)
+
+df11 = lekagulData[lekagulData$car.id %in% df9$`TRUE`$CarID,]
+df11$car.id = as.factor(df11$car.id)
+df11$car.type = as.factor(df11$car.type)
+df11$gate.name = as.factor(df11$gate.name)
+dest11 = nrow(df11) / nlevels(df11$car.id)
+```
+
+
+Seasons
+```{r}
+df3Spring = df3[df3$Date <= as.POSIXct("2015-05-31 23:59:59"),]
+df3Spring2 = df3[df3$Date >= as.POSIXct("2016-03-01 00:00:00"),]
+df3Spring = rbind(df3Spring, df3Spring2)
+df3Summer = df3[df3$Date >= as.POSIXct("2015-06-01 00:00:00"),]
+df3Summer = df3Summer[df3Summer$Date <= as.POSIXct("2015-08-31 23:59:59"),]
+df3Fall = df3[df3$Date >= as.POSIXct("2015-09-01 00:00:00"),]
+df3Fall = df3Fall[df3Fall$Date <= as.POSIXct("2015-11-30 23:59:59"),]
+df3Winter = df3[df3$Date >= as.POSIXct("2015-12-01 00:00:00"),]
+df3Winter = df3Winter[df3Winter$Date <= as.POSIXct("2016-02-29 23:59:59"),]
+
+x3 = split(df3, df3$Type)
+par(mfrow = c(2,3))
+plot(density(x3$`1`$Duration), main = "2 Axle Car", xlab = "Duration in Minutes")
+plot(density(x3$`2`$Duration), main = "2 Axle Truck", xlab = "Duration in Minutes")
+plot(density(x3$`3`$Duration), main = "3 Axle Truck", xlab = "Duration in Minutes")
+plot(density(x3$`4`$Duration), main = "4 Axle Truck", xlab = "Duration in Minutes")
+plot(density(x3$`5`$Duration), main = "2 Axle Bus", xlab = "Duration in Minutes")
+plot(density(x3$`6`$Duration), main = "3 Axle Bus", xlab = "Duration in Minutes")
+```
+
+
+
+# 62 rows went wrong
+
+```{r}
+x = split(df2, df2$Type)
+par(mfrow = c(2,3))
+plot(density(x$`1`$Duration), main = "2 Axle Car", xlab = "Duration in Minutes")
+plot(density(x$`2`$Duration), main = "2 Axle Truck", xlab = "Duration in Minutes")
+plot(density(x$`3`$Duration), main = "3 Axle Truck", xlab = "Duration in Minutes")
+plot(density(x$`4`$Duration), main = "4 Axle Truck", xlab = "Duration in Minutes")
+plot(density(x$`5`$Duration), main = "2 Axle Bus", xlab = "Duration in Minutes")
+plot(density(x$`6`$Duration), main = "3 Axle Bus", xlab = "Duration in Minutes")
+
+
+
+df2$dayOfWeek = as.POSIXlt(df2$Date)$wday
+df2$dayOfWeek[df2$dayOfWeek == 0] <- "Sunday"
+df2$dayOfWeek[df2$dayOfWeek == 1] <- "Monday"
+df2$dayOfWeek[df2$dayOfWeek == 2] <- "Tuesday"
+df2$dayOfWeek[df2$dayOfWeek == 3] <- "Wednesday"
+df2$dayOfWeek[df2$dayOfWeek == 4] <- "Thursday"
+df2$dayOfWeek[df2$dayOfWeek == 5] <- "Friday"
+df2$dayOfWeek[df2$dayOfWeek == 6] <- "Saturday"
+df2$dayOfWeek = as.factor(df2$dayOfWeek)
+
+ggplot(df2, aes(Duration)) + geom_histogram(bins = 50) + facet_grid(Type ~ dayOfWeek)
+```
+
+
+
+Separating into Seasons
+```{r}
+dfSpring = df[df$Date <= as.POSIXct("2015-05-31 23:59:59"),]
+dfSpring2 = df[df$Date >= as.POSIXct("2016-03-01 00:00:00"),]
+dfSpring = rbind(dfSpring, dfSpring2)
+dfSummer = df[df$Date >= as.POSIXct("2015-06-01 00:00:00"),]
+dfSummer = dfSummer[dfSummer$Date <= as.POSIXct("2015-08-31 23:59:59"),]
+dfFall = df[df$Date >= as.POSIXct("2015-09-01 00:00:00"),]
+dfFall = dfFall[dfFall$Date <= as.POSIXct("2015-11-30 23:59:59"),]
+dfWinter = df[df$Date >= as.POSIXct("2015-12-01 00:00:00"),]
+dfWinter = dfWinter[dfWinter$Date <= as.POSIXct("2016-02-29 23:59:59"),]
+
+spring = ggplot(df3Spring, aes(y = Duration, x = Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Car Type") + geom_boxplot(width = 0.1) + ggtitle("Spring") + ylim(0, 50000)
+summer = ggplot(df3Summer, aes(y = Duration, x = Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Car Type") + geom_boxplot(width = 0.1) + ggtitle("Summer") + ylim(0, 50000)
+fall = ggplot(df3Fall, aes(y = Duration, x = Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Car Type") + geom_boxplot(width = 0.1) + ggtitle("Fall") + ylim(0, 50000)
+winter = ggplot(df3Winter, aes(y = Duration, x = Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Car Type") + geom_boxplot(width = 0.1) + ggtitle("Winter") + ylim(0, 50000)
+grid.arrange(spring, summer, fall, winter, ncol = 2)
+```
+
+
+Violin Graph
+```{r}
+ggplot(df, aes(y = Duration, x = Car.Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Ranger") +
+  geom_boxplot(width = 0.1) + ggtitle("All Year")
+```
+
+Violin over seasons
+```{r}
+spring = ggplot(dfSpring, aes(y = Duration, x = Car.Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Ranger") + geom_boxplot(width = 0.1) + ggtitle("Spring")
+summer = ggplot(dfSummer, aes(y = Duration, x = Car.Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Ranger") + geom_boxplot(width = 0.1) + ggtitle("Summer")
+fall = ggplot(dfFall, aes(y = Duration, x = Car.Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Ranger") + geom_boxplot(width = 0.1) + ggtitle("Fall")
+winter = ggplot(dfWinter, aes(y = Duration, x = Car.Type)) + geom_point() + geom_violin() + coord_flip() + ylab("Duration in Minutes") + xlab("Ranger") + geom_boxplot(width = 0.1) + ggtitle("Winter")
+grid.arrange(spring, summer, fall, winter, ncol = 2)
+```
+
+
+
